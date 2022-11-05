@@ -9,6 +9,11 @@ from .models import Profile
 def index(request):
     return render(request, 'index.html')
 
+@login_required(login_url='signin')
+def settings(request):
+    user_profile = Profile.objects.get(user=request.user)
+    return render(request, 'setting.html')
+
 def signup(request):
     if request.method == 'POST':
         username = request.POST['username']
@@ -26,10 +31,14 @@ def signup(request):
             else:
                 user = User.objects.create_user(username=username, email=email, password=password)
                 user.save()
+
+                user_login = auth.autheticate(username=username, password=password)
+                auth.login(request, user_login)
+
                 user_model = User.objects.get(username=username)
                 new_profile = Profile.objects.create(user=user_model, id_user=user_model.id )
                 new_profile.save()
-                return redirect('signup')
+                return redirect('settings')
         else:
             messages.info(request, 'Password does not match')
             return redirect('signup')
