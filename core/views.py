@@ -4,6 +4,7 @@ from django.contrib import messages
 from django.http import HttpResponse
 from django.contrib.auth.decorators import login_required
 from .models import Profile
+
 # Create your views here.
 @login_required(login_url='signin')
 def index(request):
@@ -11,9 +12,10 @@ def index(request):
 
 @login_required(login_url='signin')
 def settings(request):
-    user_profile = Profile.objects.get(user=request.user)
-    return render(request, 'setting.html')
-
+    user_profile = Profile.objects.get( user=request.user )
+    return render(request, 'setting.html',{'user_profile': user_profile})
+   
+   
 def signup(request):
     if request.method == 'POST':
         username = request.POST['username']
@@ -32,7 +34,7 @@ def signup(request):
                 user = User.objects.create_user(username=username, email=email, password=password)
                 user.save()
 
-                user_login = auth.autheticate(username=username, password=password)
+                user_login = auth.authenticate(username=username, password=password)
                 auth.login(request, user_login)
 
                 user_model = User.objects.get(username=username)
@@ -58,7 +60,7 @@ def signin(request):
             return redirect('/')
         else:
             messages.info(request, 'Credentials Invalid')
-            return redirect ('/signin')
+            return redirect ('signin')
 
     
     return render(request, 'signin.html')
