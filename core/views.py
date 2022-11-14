@@ -3,7 +3,7 @@ from django.contrib.auth.models import User, auth
 from django.contrib import messages
 from django.http import HttpResponse
 from django.contrib.auth.decorators import login_required
-from .models import Profile, Post
+from .models import Profile, Post, LikePost, FollowersCount
 
 # Create your views here.
 @login_required(login_url='signin')
@@ -13,6 +13,49 @@ def index(request):
 
     posts = Post.objects.all()
     return render(request, 'index.html', {'user_profile': user_profile, 'posts':posts })
+
+@login_required(login_url='signin')
+def profile(request, pk):
+    user_object = User.objects.get(username=pk)
+    user_profile = Profile.objects.get(user=user_object)
+    user_posts = Post.objects.filter(user=pk)
+    user_post_length = len(user_posts)
+
+    follower = request.user.username
+    user = pk
+
+    if FollowersCount.objects.filter(follower=follower, user=user).first():
+        button_text = 'Unfollow'
+    else:
+        button_text = 'Follow'
+
+
+    context = {
+        'user_object': user_object,
+        'user_profile': user_profile,
+        'user_posts': user_posts,
+        'user_post_length': user_post_length,
+        'button_text': button_text,
+    }
+    return render(request, 'profile.html', context)
+
+login_required(login_url='signin')
+def follow(request):
+    if request.method == 'POST':
+        follower = request.POST['follower']
+        user= request.POST['user']
+
+        if  FollowersCount.objects.filter(follower=follower, user=user).first():
+            delete_follower = FollowersCount.objects.get(follower=follower, user=user)
+            delete_follower.delete()
+            return redirect('/profile/'+user)
+        else:
+            new_follower = FollowersCount.objects.create(follower=follower, user=user)
+            new_follower.save()
+            return redirect('/profile/'+user)
+
+    else:
+        return redirect('/')
 
 @login_required(login_url='signin')
 def upload(request):
@@ -33,9 +76,23 @@ def upload(request):
 
 @login_required(login_url='signin')
 def like_post(request):
-    pass
+    username = request.user.username
+    post_id = request.GET.get('post_id')
 
+    post = Post.objects.get(id=post_id)
 
+    like_filter = LikePost.objects.filter(post_id=post_id, username=username).first()
+    if like_filter == None:
+        new_like =LikePost.objects.create(post_id=post_id, username=username)
+        new_like.save()
+        post.no_of_likes = post.no_of_likes+1
+        post.save()
+        return redirect('/')
+    else:
+        like_filter.delete()
+        post.no_of_likes = post.no_of_likes-1
+        post.save()
+        return redirect('/')
 
 @login_required(login_url='signin')
 def settings(request):
